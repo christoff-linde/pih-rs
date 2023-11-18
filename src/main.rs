@@ -5,6 +5,7 @@ use axum::{
 };
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::{f32, net::SocketAddr};
 
 #[tokio::main]
@@ -57,13 +58,20 @@ async fn update_sensor(Json(payload): Json<UpdateSensor>) -> (StatusCode, Json<S
         temperature: payload.temperature,
         humidity: payload.humidity,
     };
-    let sensor_response = SensorData {
-        timestamp: utc,
-        sensor_id: payload.sensor_id,
-        data: sensor_data,
-    };
+    let sensor_response = SensorData { timestamp: utc };
 
     (StatusCode::CREATED, Json(sensor_response))
+}
+
+fn write_to_csv() -> Result<(), Box<dyn Error>> {
+    let utc: DateTime<Utc> = Utc::now();
+    let mut writer = csv::WriterBuilder::new()
+        .from_path("../data/home_data_18112023.csv")
+        .unwrap();
+
+    writer.serialize(SensorData { timestamp: utc })?;
+    writer.flush()?;
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -73,14 +81,13 @@ struct UpdateSensor {
     humidity: f32,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct SensorData {
     timestamp: DateTime<Utc>,
-    sensor_id: String,
-    data: DataObj,
+    // sensor_id: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct DataObj {
     temperature: f32,
     humidity: f32,
