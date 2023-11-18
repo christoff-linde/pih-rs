@@ -5,7 +5,7 @@ use axum::{
 };
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
+use std::fs::OpenOptions;
 use std::{f32, net::SocketAddr};
 
 #[tokio::main]
@@ -52,27 +52,48 @@ async fn create_user(
     (StatusCode::CREATED, Json(user))
 }
 
-async fn update_sensor(Json(payload): Json<UpdateSensor>) -> (StatusCode, Json<SensorData>) {
+async fn update_sensor(Json(payload): Json<UpdateSensor>) -> StatusCode {
     let utc: DateTime<Utc> = Utc::now();
-    let sensor_data = DataObj {
+    // let sensor_data = DataObj {
+    //    temperature: payload.temperature,
+    //    humidity: payload.humidity,
+    //};
+    let sensor_response = SensorData {
+        timestamp: utc,
+        sensor_id: payload.sensor_id,
         temperature: payload.temperature,
         humidity: payload.humidity,
     };
-    let sensor_response = SensorData { timestamp: utc };
 
-    (StatusCode::CREATED, Json(sensor_response))
-}
-
-fn write_to_csv() -> Result<(), Box<dyn Error>> {
-    let utc: DateTime<Utc> = Utc::now();
-    let mut writer = csv::WriterBuilder::new()
-        .from_path("../data/home_data_18112023.csv")
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open("./data/home_data_18112023.csv")
         .unwrap();
 
-    writer.serialize(SensorData { timestamp: utc })?;
-    writer.flush()?;
-    Ok(())
+    let mut writer = csv::WriterBuilder::new()
+        .has_headers(false)
+        .from_writer(file);
+    writer.serialize(sensor_response).unwrap();
+    writer.flush().unwrap();
+
+    StatusCode::CREATED
 }
+
+//fn write_to_csv(sensor_data: &SensorData) -> Result<(), Box<dyn Error>> {
+//    let utc: DateTime<Utc> = Utc::now();
+//   let mut file = OpenOptions::new()
+//        .write(true)
+//        .create(true)
+//        .append(true)
+//        .open("./data/home_data_18112023.csv")
+//        .unwrap();
+//
+//    let mut writer = csv::WriterBuilder::new().from_writer(file);
+//
+//    Ok(())
+// }
 
 #[derive(Deserialize)]
 struct UpdateSensor {
@@ -84,7 +105,9 @@ struct UpdateSensor {
 #[derive(Debug, Serialize)]
 struct SensorData {
     timestamp: DateTime<Utc>,
-    // sensor_id: String,
+    sensor_id: String,
+    temperature: f32,
+    humidity: f32,
 }
 
 #[derive(Debug, Serialize)]
