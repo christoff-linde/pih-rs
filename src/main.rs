@@ -63,11 +63,14 @@ async fn update_sensor(payload: Query<UpdateSensor>) -> Json<SensorData> {
         humidity: payload.humidity,
     };
 
+    let file_name_prefix = Local::now().format("%d%m%Y");
+    let file_path = format!("./data/home_data_{:}.csv", file_name_prefix);
+
     let file = OpenOptions::new()
         .write(true)
         .create(true)
         .append(true)
-        .open("./data/home_data_22112023.csv")
+        .open(file_path)
         .unwrap();
 
     let mut writer = csv::WriterBuilder::new()
