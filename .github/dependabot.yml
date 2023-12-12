@@ -8,20 +8,20 @@ updates:
   - package-ecosystem: "cargo" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
+      interval: "daily"
     labels:
       - "cargo"
       - "dependencies"
     commit-message:
-      prefix: "deps(cargo)"
+      prefix: "cargo: "
       include: "scope"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     labels:
       - "docker"
       - "dependencies"
     commit-message:
-      prefix: "deps(docker)"
+      prefix: "docker: "
       include: "scope"
