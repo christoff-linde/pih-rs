@@ -1,30 +1,99 @@
 use axum::{
-    extract::Query,
-    http::StatusCode,
+    async_trait,
+    extract::{FromRef, FromRequestParts, Query, State},
+    http::{request::Parts, StatusCode},
     routing::{get, post},
     Json, Router,
 };
 use chrono::prelude::*;
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
-use std::fs::OpenOptions;
+use std::{fs::OpenOptions, time::Duration};
+
+use sqlx::postgres::{PgPool, PgPoolOptions};
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
     // initialize tracing
     tracing_subscriber::fmt::init();
 
+    dotenv().ok();
+
+    let db_connection_str = std::env::var("POSTGRES_DB_URL").expect("POSTGRES_DB_URL must be set");
+
+    // set up a connection pool
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&db_connection_str)
+        .await
+        .expect("cannot commect to database");
+
     // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
-        .route("/", get(root))
+        ////.route("/", get(root))
+        .route(
+            "/",
+            get(using_connection_pool_extractor).post(using_connection_extractor),
+        )
+        .with_state(pool)
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
         // `POST / update-sensor` goes to `update_sensor`
         .route("/update-sensor", get(update_sensor));
 
-    // run our app with hyper
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    // run it with hyper
+    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
+    tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
+}
+
+// we can extract the connection pool with `State`
+async fn using_connection_pool_extractor(
+    State(pool): State<PgPool>,
+) -> Result<String, (StatusCode, String)> {
+    sqlx::query_scalar("select 'hello world from pg'")
+        .fetch_one(&pool)
+        .await
+        .map_err(internal_error)
+}
+
+// we can also write a custom extractor that grabs a connection from the pool
+// which setup is appropriate depends on your application
+struct DatabaseConnection(sqlx::pool::PoolConnection<sqlx::Postgres>);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for DatabaseConnection
+where
+    PgPool: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, String);
+    async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let pool = PgPool::from_ref(state);
+        let conn = pool.acquire().await.map_err(internal_error)?;
+
+        Ok(Self(conn))
+    }
+}
+
+async fn using_connection_extractor(
+    DatabaseConnection(mut conn): DatabaseConnection,
+) -> Result<String, (StatusCode, String)> {
+    sqlx::query_scalar("select 'hello world from pg'")
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)
+}
+
+/// Utility function for mapping any error into a `500 Internal Server Error` response
+fn internal_error<E>(err: E) -> (StatusCode, String)
+where
+    E: std::error::Error,
+{
+    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
 
 async fn root() -> &'static str {
