@@ -8,9 +8,8 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432"
-    env_file:
-      - ./.env
+      RUST_BACKTRACE: 1
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD}@db:5438"
     ports:
       - "3000:3000"
     restart: always
@@ -20,10 +19,9 @@ services:
     container_name: pih-rs-db
     image: timescale/timescaledb:latest-pg16
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5440:5432"
+      - "5438:5432"
     restart: always
     volumes:
       - db:/var/lib/postgresql/data
