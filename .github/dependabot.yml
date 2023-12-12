@@ -13,7 +13,6 @@ updates:
       - "cargo"
       - "dependencies"
     commit-message:
-      prefix: "deps(cargo)"
       include: "scope"
   - package-ecosystem: "docker"
     directory: "/"
