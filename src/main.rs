@@ -8,7 +8,7 @@ use axum::{
 use chrono::prelude::*;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
-use std::{fs::OpenOptions, time::Duration};
+use std::{fs::OpenOptions, io::BufReader, time::Duration};
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tokio::net::TcpListener;
@@ -20,15 +20,15 @@ async fn main() {
 
     dotenv().ok();
 
-    let db_connection_str = std::env::var("POSTGRES_DB_URL").expect("POSTGRES_DB_URL must be set");
+    let db_connection_str = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     // set up a connection pool
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .acquire_timeout(Duration::from_secs(3))
+        .acquire_timeout(Duration::from_secs(5))
         .connect(&db_connection_str)
         .await
-        .expect("cannot commect to database");
+        .expect("cannot connect to database");
 
     // build our application with a route
     let app = Router::new()
@@ -39,10 +39,12 @@ async fn main() {
             get(using_connection_pool_extractor).post(using_connection_extractor),
         )
         .with_state(pool)
+        .route("/users", get(root))
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
         // `POST / update-sensor` goes to `update_sensor`
-        .route("/update-sensor", get(update_sensor));
+        .route("/update-sensor", get(update_sensor))
+        .route("/sensor-data", get(get_sensor_data));
 
     // run it with hyper
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
@@ -145,6 +147,23 @@ async fn update_sensor(payload: Query<UpdateSensor>) -> Json<SensorData> {
     Json(sensor_response)
 }
 
+async fn get_sensor_data() -> Json<Vec<SensorData>> {
+    let file_path = "./data/home_data_27112023.csv";
+    let file = OpenOptions::new().read(true).open(file_path).unwrap();
+
+    let mut rdr = csv::Reader::from_reader(file);
+    let sensor_data: Result<Vec<SensorData>, csv::Error> = rdr.deserialize().collect();
+
+    match sensor_data {
+        Ok(data) => Json(data),
+        Err(err) => {
+            // Handle error, log, or return appropriate response
+            println!("Error reading CSV: {}", err);
+            Json(vec![])
+        }
+    }
+}
+
 //fn write_to_csv(sensor_data: &SensorData) -> Result<(), Box<dyn Error>> {
 //    let utc: DateTime<Utc> = Utc::now();
 //   let mut file = OpenOptions::new()
@@ -166,7 +185,7 @@ struct UpdateSensor {
     humidity: f32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct SensorData {
     timestamp: DateTime<Local>,
     sensor_id: String,
