@@ -7,7 +7,6 @@ use axum::{
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::{f32, net::SocketAddr};
 
 #[tokio::main]
 async fn main() {
@@ -24,13 +23,8 @@ async fn main() {
         .route("/update-sensor", get(update_sensor));
 
     // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn root() -> &'static str {
