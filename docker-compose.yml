@@ -2,9 +2,32 @@ version: "3"
 
 services:
   api:
+    container_name: pih-rs-api
+    image: christofflinde/pih-rs
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432"
+    env_file:
+      - ./.env
     ports:
       - "3000:3000"
     restart: always
+    depends_on:
+      - db
+  db:
+    container_name: pih-rs-db
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5440:5432"
+    restart: always
+    volumes:
+      - db:/var/lib/postgresql/data
+
+volumes:
+  db:
+    driver: local
