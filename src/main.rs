@@ -8,7 +8,7 @@ use axum::{
 use chrono::prelude::*;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
-use std::{fs::OpenOptions, io::BufReader, time::Duration};
+use std::{fs::OpenOptions, time::Duration};
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tokio::net::TcpListener;
