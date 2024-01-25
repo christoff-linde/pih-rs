@@ -1,4 +1,4 @@
 -- Add down migration script here
-DROP TABLE sensor_data;
+DROP TABLE IF EXISTS sensor_data;
 
-DROP TABLE sensors;
+DROP TABLE IF EXISTS sensors;

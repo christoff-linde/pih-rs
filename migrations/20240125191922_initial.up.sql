@@ -1,12 +1,12 @@
 -- Add up migration script here
-CREATE TABLE sensors
+CREATE TABLE IF NOT EXISTS sensors
 (
     id       SERIAL PRIMARY KEY,
     type     VARCHAR(50),
     location VARCHAR(50)
 );
 
-CREATE TABLE sensor_data
+CREATE TABLE IF NOT EXISTS  sensor_data
 (
     time        TIMESTAMPTZ NOT NULL,
     sensor_id   INTEGER,
