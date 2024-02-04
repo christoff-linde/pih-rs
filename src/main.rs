@@ -8,11 +8,10 @@ use axum::{
 use chrono::prelude::*;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
-use std::{fs::OpenOptions, time::Duration};
 use std::str::FromStr;
+use std::{fs::OpenOptions, time::Duration};
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
@@ -46,8 +45,7 @@ async fn main() {
         .with_state(pool);
 
     // run it with hyper
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -67,9 +65,9 @@ struct DatabaseConnection(sqlx::pool::PoolConnection<sqlx::Postgres>);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for DatabaseConnection
-    where
-        PgPool: FromRef<S>,
-        S: Send + Sync,
+where
+    PgPool: FromRef<S>,
+    S: Send + Sync,
 {
     type Rejection = (StatusCode, String);
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
@@ -91,8 +89,8 @@ async fn using_connection_extractor(
 
 /// Utility function for mapping any error into a `500 Internal Server Error` response
 fn internal_error<E>(err: E) -> (StatusCode, String)
-    where
-        E: std::error::Error,
+where
+    E: std::error::Error,
 {
     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
@@ -130,7 +128,7 @@ async fn root() -> &'static str {
 //     Json(sensor_response)
 // }
 
-async fn update_sensor(payload: Query<UpdateSensor>,State(pool): State<PgPool>) {
+async fn update_sensor(payload: Query<UpdateSensor>, State(pool): State<PgPool>) {
     let payload: UpdateSensor = payload.0;
     let now_with_utc: DateTime<Local> = Local::now();
 
@@ -141,7 +139,6 @@ async fn update_sensor(payload: Query<UpdateSensor>,State(pool): State<PgPool>) 
     // let datetime = DateTime::parse_from_rfc3339(&payload.timestamp).unwrap();
     // convert the string into DateTime<Utc> or other timezone
     // let datetime_utc = datetime.with_timezone(&Local);
-
 
     // let yeet = DateTime::parse_from_rfc3339(&payload.timestamp).unwrap_or_else(|e| panic!("Failed to parse"));
     let sensor_data = SensorData {
@@ -158,11 +155,12 @@ async fn update_sensor(payload: Query<UpdateSensor>,State(pool): State<PgPool>) 
         .bind(sensor_data.sensor_id)
         .bind(sensor_data.temperature)
         .bind(sensor_data.humidity)
-        .execute(&pool).await;
+        .execute(&pool)
+        .await;
 
     match result {
         Ok(_) => println!("ROW inserted"),
-        Err(error) => println!("ERROR inserting row: {}", error)
+        Err(error) => println!("ERROR inserting row: {}", error),
     }
 }
 
@@ -199,7 +197,7 @@ async fn get_sensor_data() -> Json<Vec<SensorData>> {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UpdateSensor {
-    timestamp: String,
+    timestamp: Option<String>,
     sensor_id: i32,
     temperature: f32,
     humidity: f32,
