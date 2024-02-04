@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS sensors
 
 CREATE TABLE IF NOT EXISTS  sensor_data
 (
-    time        TIMESTAMPTZ NOT NULL,
+    time        TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     sensor_id   INTEGER,
     temperature DOUBLE PRECISION,
     humidity    DOUBLE PRECISION,
