@@ -9,6 +9,7 @@ use chrono::prelude::*;
 use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use std::{fs::OpenOptions, time::Duration};
+use std::str::FromStr;
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tokio::net::TcpListener;
@@ -34,17 +35,15 @@ async fn main() {
     let app = Router::new()
         // `GET /` goes to `root`
         ////.route("/", get(root))
-        .route(
-            "/",
-            get(using_connection_pool_extractor).post(using_connection_extractor),
-        )
-        .with_state(pool)
-        .route("/users", get(root))
-        // `POST /users` goes to `create_user`
-        .route("/users", post(create_user))
+        // .route(
+        //     "/",
+        //     get(using_connection_pool_extractor).post(using_connection_extractor),
+        // )
+        .route("/", get(root))
         // `POST / update-sensor` goes to `update_sensor`
         .route("/update-sensor", get(update_sensor))
-        .route("/sensor-data", get(get_sensor_data));
+        .route("/sensor-data", get(get_sensor_data))
+        .with_state(pool);
 
     // run it with hyper
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
@@ -68,9 +67,9 @@ struct DatabaseConnection(sqlx::pool::PoolConnection<sqlx::Postgres>);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for DatabaseConnection
-where
-    PgPool: FromRef<S>,
-    S: Send + Sync,
+    where
+        PgPool: FromRef<S>,
+        S: Send + Sync,
 {
     type Rejection = (StatusCode, String);
     async fn from_request_parts(_parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
@@ -92,8 +91,8 @@ async fn using_connection_extractor(
 
 /// Utility function for mapping any error into a `500 Internal Server Error` response
 fn internal_error<E>(err: E) -> (StatusCode, String)
-where
-    E: std::error::Error,
+    where
+        E: std::error::Error,
 {
     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
@@ -102,53 +101,73 @@ async fn root() -> &'static str {
     "Hello, World!"
 }
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
-    };
+// async fn update_sensor(payload: Query<UpdateSensor>) -> Json<SensorData> {
+//     let payload: UpdateSensor = payload.0;
+//     let now_with_utc: DateTime<Local> = Local::now();
+//     let sensor_response = SensorData {
+//         timestamp: now_with_utc,
+//         sensor_id: payload.sensor_id,
+//         temperature: payload.temperature,
+//         humidity: payload.humidity,
+//     };
+//
+//     let file_name_prefix = Local::now().format("%d%m%Y");
+//     let file_path = format!("./data/home_data_{:}.csv", file_name_prefix);
+//
+//     let file = OpenOptions::new()
+//         .write(true)
+//         .create(true)
+//         .append(true)
+//         .open(file_path)
+//         .unwrap();
+//
+//     let mut writer = csv::WriterBuilder::new()
+//         .has_headers(false)
+//         .from_writer(file);
+//     writer.serialize(&sensor_response).unwrap();
+//     writer.flush().unwrap();
+//
+//     Json(sensor_response)
+// }
 
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
-}
-
-async fn update_sensor(payload: Query<UpdateSensor>) -> Json<SensorData> {
+async fn update_sensor(payload: Query<UpdateSensor>,State(pool): State<PgPool>) {
     let payload: UpdateSensor = payload.0;
     let now_with_utc: DateTime<Local> = Local::now();
-    let sensor_response = SensorData {
+
+    dbg!(&payload);
+
+    // let date_str = "2020-04-12T22:10:57+02:00";
+    // convert the string into DateTime<FixedOffset>
+    // let datetime = DateTime::parse_from_rfc3339(&payload.timestamp).unwrap();
+    // convert the string into DateTime<Utc> or other timezone
+    // let datetime_utc = datetime.with_timezone(&Local);
+
+
+    // let yeet = DateTime::parse_from_rfc3339(&payload.timestamp).unwrap_or_else(|e| panic!("Failed to parse"));
+    let sensor_data = SensorData {
         timestamp: now_with_utc,
         sensor_id: payload.sensor_id,
         temperature: payload.temperature,
         humidity: payload.humidity,
     };
 
-    let file_name_prefix = Local::now().format("%d%m%Y");
-    let file_path = format!("./data/home_data_{:}.csv", file_name_prefix);
+    dbg!(&sensor_data);
 
-    let file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .append(true)
-        .open(file_path)
-        .unwrap();
+    let result = sqlx::query("INSERT INTO sensor_data VALUES ($1, $2, $3, $4)")
+        .bind(sensor_data.timestamp)
+        .bind(sensor_data.sensor_id)
+        .bind(sensor_data.temperature)
+        .bind(sensor_data.humidity)
+        .execute(&pool).await;
 
-    let mut writer = csv::WriterBuilder::new()
-        .has_headers(false)
-        .from_writer(file);
-    writer.serialize(&sensor_response).unwrap();
-    writer.flush().unwrap();
-
-    Json(sensor_response)
+    match result {
+        Ok(_) => println!("ROW inserted"),
+        Err(error) => println!("ERROR inserting row: {}", error)
+    }
 }
 
 async fn get_sensor_data() -> Json<Vec<SensorData>> {
-    let file_path = "./data/home_data_27112023.csv";
+    let file_path = "./data/home_data_28112023.csv";
     let file = OpenOptions::new().read(true).open(file_path).unwrap();
 
     let mut rdr = csv::Reader::from_reader(file);
@@ -178,9 +197,10 @@ async fn get_sensor_data() -> Json<Vec<SensorData>> {
 //    Ok(())
 // }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct UpdateSensor {
-    sensor_id: String,
+    timestamp: String,
+    sensor_id: i32,
     temperature: f32,
     humidity: f32,
 }
@@ -188,7 +208,7 @@ struct UpdateSensor {
 #[derive(Debug, Serialize, Deserialize)]
 struct SensorData {
     timestamp: DateTime<Local>,
-    sensor_id: String,
+    sensor_id: i32,
     temperature: f32,
     humidity: f32,
 }
@@ -197,17 +217,4 @@ struct SensorData {
 struct DataObj {
     temperature: f32,
     humidity: f32,
-}
-
-// the input to our `create_user` handler
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-// the output to our `create_user` handler
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
 }
