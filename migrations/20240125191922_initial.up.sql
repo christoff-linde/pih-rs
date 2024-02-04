@@ -14,3 +14,7 @@ CREATE TABLE IF NOT EXISTS  sensor_data
     humidity    DOUBLE PRECISION,
     FOREIGN KEY (sensor_id) REFERENCES sensors (id)
 );
+
+SELECT create_hypertable('sensor_data', 'time');
+
+CREATE UNIQUE INDEX sensor_data_sensor_id_time_idx on sensor_data(sensor_id, time desc);
