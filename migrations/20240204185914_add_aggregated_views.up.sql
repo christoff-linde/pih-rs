@@ -55,7 +55,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_5_minutes',
                                        start_offset => null,
-                                       end_offset => INTERVAL '5 minutes',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '5 minutes');
 
 
@@ -75,7 +75,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_15_minutes',
                                        start_offset => null,
-                                       end_offset => INTERVAL '15 minutes',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '15 minutes');
 
 
@@ -95,7 +95,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_30_minutes',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '5 minutes');
 
 
@@ -115,7 +115,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_1_hours',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '5 minutes');
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS conditions_summary_6_hours
@@ -134,7 +134,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_6_hours',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '30 minutes');
 
 
@@ -154,7 +154,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_12_hours',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 hours');
 
 
@@ -174,7 +174,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_1_days',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 hours');
 
 
@@ -194,7 +194,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_2_days',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 days');
 
 
@@ -214,7 +214,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_7_days',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 days');
 
 
@@ -234,7 +234,7 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_1_weeks',
                                        start_offset => null,
-                                       end_offset => INTERVAL '30 days',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 days');
 
 
@@ -254,6 +254,6 @@ WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('conditions_summary_1_months',
                                        start_offset => null,
-                                       end_offset => INTERVAL '3 months',
+                                       end_offset => INTERVAL '1 minutes',
                                        schedule_interval => '1 days');
 
