@@ -1,5 +1,8 @@
+use anyhow::Context;
 use axum::{
     extract::{Query, State},
+    http::StatusCode,
+    response::IntoResponse,
     routing::get,
     Json, Router,
 };
@@ -11,13 +14,13 @@ use std::{fs::OpenOptions, time::Duration};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     // initialize tracing
     tracing_subscriber::fmt::init();
 
     dotenv().ok();
 
-    let db_connection_str = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let db_connection_str = dotenvy::var("DATABASE_URL").context("DATABASE_URL must be set")?;
 
     // set up a connection pool
     let pool = PgPoolOptions::new()
@@ -40,7 +43,33 @@ async fn main() {
 
     // run it with hyper
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .context("error running server")
+}
+
+// TODO - move to error module
+struct AppError(anyhow::Error);
+
+// TODO - move to error module
+impl IntoResponse for AppError {
+    fn into_response(self) -> axum::response::Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Internal Server Error: {}", self.0),
+        )
+            .into_response()
+    }
+}
+
+// TODO - move to error module
+impl<E> From<E> for AppError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        AppError(err.into())
+    }
 }
 
 async fn root() -> &'static str {
