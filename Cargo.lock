@@ -61,6 +61,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "080e9890a082662b09c1ad45f567faeeb47f22b5fb23895fbe1e651e718e25ca"
+
+[[package]]
 name = "async-trait"
 version = "0.1.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1052,6 +1058,7 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 name = "pih-rs"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "axum",
  "chrono",
  "csv",
