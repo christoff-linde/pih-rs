@@ -27,6 +27,8 @@ async fn main() {
         .await
         .expect("cannot connect to database");
 
+    sqlx::migrate!().run(&pool).await.unwrap();
+
     // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
