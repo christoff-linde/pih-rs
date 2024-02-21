@@ -16,8 +16,24 @@ shell-db:
 
 # Run clippy on all code
 lint:
-  cargo clippy 
+  cargo clippy
+
+# Run cargo fmt on all code
+fmt:
+  cargo fmt
 
 # Run the API service (without docker)
 run:
   cargo run
+
+# Convert all .csv files in data/ to .parquet using csv2parquet
+convert:
+  @for file in data/*.csv; do \
+    echo "Converting $file to Parquet"; \
+    csv2parquet $file "data/$(basename $file .csv).parquet"; \
+  done
+
+  @for file in data/db_dumps/*.csv; do \
+    echo "Converting $file to Parquet"; \
+    csv2parquet $file "data/db_dumps/$(basename $file .csv).parquet"; \
+  done
