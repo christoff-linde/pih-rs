@@ -18,6 +18,10 @@ shell-db:
 lint:
   cargo clippy
 
+# Run cargo fmt on all code
+fmt:
+  cargo fmt
+
 # Run the API service (without docker)
 run:
   cargo run
