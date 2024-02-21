@@ -16,6 +16,7 @@ parquet = "50.0.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "any", "postgres", "chrono"] }
+thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
