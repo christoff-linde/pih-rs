@@ -1,8 +1,6 @@
 use anyhow::Context;
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
     routing::get,
     Json, Router,
 };
@@ -42,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         .acquire_timeout(Duration::from_secs(5))
         .connect(&config.database_url)
         .await
-        .expect("cannot connect to database");
+        .context("cannot connect to database")?;
 
     // This embeds database migrations in the application binary so we can ensure
     // the database schema is up to date when the application starts.
@@ -65,30 +63,6 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app)
         .await
         .context("error running server")
-}
-
-// TODO - move to error module
-struct AppError(anyhow::Error);
-
-// TODO - move to error module
-impl IntoResponse for AppError {
-    fn into_response(self) -> axum::response::Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Internal Server Error: {}", self.0),
-        )
-            .into_response()
-    }
-}
-
-// TODO - move to error module
-impl<E> From<E> for AppError
-where
-    E: Into<anyhow::Error>,
-{
-    fn from(err: E) -> Self {
-        AppError(err.into())
-    }
 }
 
 async fn root() -> &'static str {
