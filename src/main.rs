@@ -4,16 +4,18 @@ use axum::{
     Json, Router,
 };
 use chrono::prelude::*;
-use dotenvy::dotenv;
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use std::{fs::OpenOptions, time::Duration};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
+use pih_rs::config::Config;
+
 #[tokio::main]
 async fn main() {
-    // initial
+    // initialize tracing
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -25,19 +27,23 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    dotenv().ok();
+    dotenvy::dotenv().ok();
 
-    let db_connection_str = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    // Parse our configuration from the environment.
+    // This will exit with a help message if something is wrong.
+    let config = Config::parse();
 
     // set up a connection pool
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
+    let db_pool = PgPoolOptions::new()
+        .max_connections(config.max_pool_size)
         .acquire_timeout(Duration::from_secs(5))
-        .connect(&db_connection_str)
+        .connect(&config.database_url)
         .await
         .expect("cannot connect to database");
 
-    sqlx::migrate!().run(&pool).await.unwrap();
+    // This embeds database migrations in the application binary so we can ensure
+    // the database schema is up to date when the application starts.
+    sqlx::migrate!().run(&db_pool).await.unwrap();
 
     // build our application with a route
     let app = Router::new()
@@ -46,10 +52,12 @@ async fn main() {
         // `POST / update-sensor` goes to `update_sensor`
         .route("/update-sensor", get(update_sensor))
         .route("/sensor-data", get(get_sensor_data))
-        .with_state(pool);
+        .with_state(db_pool);
 
     // run it with hyper
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&config.server_url)
+        .await
+        .unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
