@@ -1,3 +1,4 @@
+use anyhow::Context;
 use axum::{
     extract::{Query, State},
     routing::get,
@@ -14,7 +15,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use pih_rs::config::Config;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     // initialize tracing
     tracing_subscriber::registry()
         .with(
@@ -39,7 +40,7 @@ async fn main() {
         .acquire_timeout(Duration::from_secs(5))
         .connect(&config.database_url)
         .await
-        .expect("cannot connect to database");
+        .context("cannot connect to database")?;
 
     // This embeds database migrations in the application binary so we can ensure
     // the database schema is up to date when the application starts.
@@ -59,7 +60,9 @@ async fn main() {
         .await
         .unwrap();
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .context("error running server")
 }
 
 async fn root() -> &'static str {
