@@ -1,5 +1,6 @@
 // Utility modules.
 use crate::config::Config;
+use anyhow::Context;
 use axum::{http::header::AUTHORIZATION, Router};
 use sqlx::PgPool;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -33,6 +34,7 @@ use tower_http::{
 ///
 /// This can be accessed by adding a parameter `State<ApiContext>` to the parameters of
 /// handler function.
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct ApiContext {
     config: Arc<Config>,
@@ -55,11 +57,11 @@ pub async fn serve(config: Config, db_pool: PgPool) -> anyhow::Result<()> {
         .context("error running HTTP server")
 }
 
-async fn api_router(api_context: ApiContext) -> Router {
-    // This is the order that the modules were authored in
+fn api_router(api_context: ApiContext) -> Router {
+    // This is the order that the modules were authored in.
     Router::new()
         .merge(sensors::router())
-        // Enables logging. Use `RUST_LOG=tower_http=debug` to see the logs.
+        // Enables logging. Use `RUST_LOG=tower_http=debug`
         .layer((
             SetSensitiveHeadersLayer::new([AUTHORIZATION]),
             CompressionLayer::new(),
@@ -76,13 +78,13 @@ async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
-            .expect("failed to install CTRL+C signal handler");
+            .expect("failed to install Ctrl+C handler");
     };
 
     #[cfg(unix)]
     let terminate = async {
         signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install SIGTERM signal handler")
+            .expect("failed to install signal handler")
             .recv()
             .await;
     };
@@ -91,7 +93,7 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => (),
-        _ = terminate => (),
+        _ = ctrl_c => {},
+        _ = terminate => {},
     }
 }
