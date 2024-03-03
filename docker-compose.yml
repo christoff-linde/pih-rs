@@ -1,19 +1,20 @@
 version: "3"
 
 services:
-  #  api:
-  #  container_name: pih-rs-api
-  #  image: christofflinde/pih-rs
-  #  build:
-  #    context: .
-  #    dockerfile: Dockerfile
-  #  environment:
-  #    RUST_BACKTRACE: 1
-  #    DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@db:5439"
-  #  ports:
-  #    - "3000:3000"
-  #  depends_on:
-  #    - db
+  backend:
+    container_name: pih-rs-api
+    image: christofflinde/pih-rs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      RUST_BACKTRACE: 1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
   db:
     container_name: pih-rs-db
     image: timescale/timescaledb:latest-pg16
