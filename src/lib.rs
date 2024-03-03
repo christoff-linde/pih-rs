@@ -2,3 +2,6 @@
 ///
 /// [`clap`]: https://github.com/clap-rs/clap
 pub mod config;
+
+/// Contains the setup code for the API.
+pub mod http;
