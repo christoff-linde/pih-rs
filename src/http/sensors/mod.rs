@@ -51,10 +51,10 @@ async fn create_sensor_reading(
 
     match result {
         Ok(_) => {
-            println!("ROW inserted");
+            tracing::debug!("Successfully inserted row: {:?}", &result);
         }
         Err(error) => {
-            println!("ERROR inserting row: {}", error);
+            tracing::error!("Error inserting row: {:?}", error);
         }
     }
 
