@@ -49,7 +49,7 @@ pub async fn serve(config: Config, db_pool: PgPool) -> anyhow::Result<()> {
 
     let app = api_router(api_context);
 
-    let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 3000));
+    let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
     let listener = TcpListener::bind(addr).await?;
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
