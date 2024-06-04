@@ -7,20 +7,62 @@ use axum::{
     Json,
 };
 use chrono::prelude::*;
-use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 
 use crate::http::ApiContext;
 
 pub(crate) fn router() -> Router<ApiContext> {
-    Router::new().route("/", get(root)).route(
-        "/api/sensors",
-        post(create_sensor_reading).get(list_sensor_readings),
-    )
+    Router::new()
+        .route("/", get(root))
+        .route("/api/sensors", get(create_reading))
 }
 
 async fn root() -> &'static str {
     "Hello, World!"
+}
+
+async fn create_reading(
+    ctx: State<ApiContext>,
+    query: Query<SensorReading>,
+) -> Result<Json<SensorReading>> {
+    let now_with_utc: DateTime<Local> = Local::now();
+
+    dbg!(&query);
+
+    let result = sqlx::query_as!(
+        SensorReadingFromQuery,
+        // language=PostgreSQL
+        r#"WITH inserted_reading as (
+            INSERT INTO sensor_data (time, sensor_id, temperature, humidity)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        )
+        SELECT inserted_reading.*
+        FROM inserted_reading
+        "#,
+        now_with_utc,
+        query.sensor_id,
+        query.temperature,
+        query.humidity,
+    )
+    .fetch_one(&ctx.db_pool)
+    .await;
+
+    match result {
+        Ok(_) => {
+            tracing::debug!("Successfully inserted row: {:?}", &result);
+        }
+        Err(error) => {
+            tracing::error!("Error inserting row: {:?}", error);
+        }
+    }
+
+    Ok(Json(SensorReading {
+        time: Some(now_with_utc),
+        sensor_id: query.sensor_id,
+        temperature: query.temperature,
+        humidity: query.humidity,
+    }))
 }
 
 async fn create_sensor_reading(
@@ -78,36 +120,6 @@ struct ListSensorReadingsQuery {
 #[derive(Debug, Serialize)]
 struct MultipleSensorReadings {
     sensor_readings: Vec<SensorReading>,
-}
-
-async fn list_sensor_readings(
-    ctx: State<ApiContext>,
-    query: Query<ListSensorReadingsQuery>,
-) -> Result<Json<MultipleSensorReadings>> {
-    let sensor_readings: Vec<_> = sqlx::query_as!(
-        SensorReadingFromQuery,
-        r#"
-            SELECT time, sensor_id, temperature, humidity
-            FROM sensor_data
-            WHERE ($1::TIMESTAMPTZ IS NULL OR time >= $1)
-              AND ($2::TIMESTAMPTZ IS NULL OR time <= $2)
-              AND ($3::INT IS NULL OR sensor_id = $3)
-            ORDER BY time
-            LIMIT $4
-            OFFSET $5
-        "#,
-        query.start_time,
-        query.end_time,
-        query.sensor_id,
-        query.limit.unwrap_or(100),
-        query.offset.unwrap_or(0),
-    )
-    .fetch(&ctx.db_pool)
-    .map_ok(SensorReadingFromQuery::into_sensor_reading)
-    .try_collect()
-    .await?;
-
-    Ok(Json(MultipleSensorReadings { sensor_readings }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

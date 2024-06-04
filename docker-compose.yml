@@ -4,19 +4,19 @@ networks:
   default:
     name: pih-rs
 services:
-  backend:
-    container_name: pih-rs-api
-    image: christofflinde/pih-rs
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - ./.env
-      - ./.env.override
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
+  # backend:
+  #   container_name: pih-rs-api
+  #   image: christofflinde/pih-rs
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - ./.env
+  #     - ./.env.override
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - db
   db:
     container_name: pih-rs-db
     image: timescale/timescaledb:latest-pg16
